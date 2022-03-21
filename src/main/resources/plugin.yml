@@ -1,0 +1,13 @@
+name: CSSyncStock
+version: '${version}'
+main: com.gmail.necnionch.myplugin.cssyncstock.bukkit.SyncStockPlugin
+api-version: 1.14
+depend: [ ChestShop ]
+authors: [ Necnion8 ]
+
+
+commands:
+  cssyncstock:
+    aliases: [cssp]
+    permission: chestshopsyncstock.command.chestshopsyncstock
+    permission-message: "§cこのコマンドを実行する権限がありません"
