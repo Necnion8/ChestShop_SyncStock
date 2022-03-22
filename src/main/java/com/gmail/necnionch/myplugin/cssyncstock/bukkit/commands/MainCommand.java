@@ -28,6 +28,7 @@ public class MainCommand extends RootCommand {
 
         Command def = addCommand("check", null, this::execCheck);
         addCommand("set", null, this::execSet);
+        addCommand("reset", null, this::execReset);
         setDefault(def);
     }
 
@@ -35,7 +36,7 @@ public class MainCommand extends RootCommand {
     public void onError(@NotNull CommandSender sender, @Nullable Command command, @NotNull CommandError error) {
         String message = "不明なエラーが発生しました";
         if (error instanceof NotFoundCommandError) {
-            message = "&f/<command> &e[check]&f\n/<command> set &e(extraValue)";
+            message = "&f/cssp &e[check]&f\n/cssp set &e(extraValue)\n/cssp reset";
         } else if (error instanceof PermissionCommandError) {
             message = "権限がありません";
         } else if (error instanceof InternalCommandError) {
@@ -93,6 +94,21 @@ public class MainCommand extends RootCommand {
         executeSet(player, ((Sign) targetBlock.getState()), extraValue);
     }
 
+    private void execReset(CommandSender sender, List<String> args) {
+        if (!(sender.getSender() instanceof Player)) {
+            send(sender, "&cプレイヤーのみ実行できるコマンドです");
+            return;
+        }
+        Player player = (Player) sender.getSender();
+        Block targetBlock = player.getTargetBlockExact(4);
+
+        if (targetBlock == null || !ChestShopSign.isValid(targetBlock)) {
+            send(sender, "&cショップ看板にフォーカスを当てて実行してください");
+            return;
+        }
+        executeReset(player, ((Sign) targetBlock.getState()));
+    }
+
 
     private void executeLookup(Player player, Sign sign) {
         SyncStockSign syncStockSign = SyncStockSign.from(sign);
@@ -100,10 +116,7 @@ public class MainCommand extends RootCommand {
             send(player, "&c設定されていません");
             return;
         }
-
-        Float extraValue = syncStockSign.getExtraValue();
-
-        send(player, "value1: " + extraValue);
+        send(player, "設定されている価格同期: &6x" + syncStockSign.getExtraValue());
     }
 
     private void executeSet(Player player, Sign sign, float extraValue) {
@@ -113,6 +126,15 @@ public class MainCommand extends RootCommand {
         }
         SyncStockSign syncStockSign = SyncStockSign.from(sign, extraValue);
         syncStockSign.updatePrice();
+        send(player, "&a価格同期(x" + extraValue + ")を有効にしました");
+    }
+
+    private void executeReset(Player player, Sign sign) {
+        if (SyncStockSign.clean(sign)) {
+            send(player, "&a価格同期設定を削除しました");
+        } else {
+            send(player, "&c価格同期は設定されていません");
+        }
     }
 
 

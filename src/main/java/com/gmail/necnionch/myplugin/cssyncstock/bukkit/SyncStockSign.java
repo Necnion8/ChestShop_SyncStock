@@ -1,12 +1,13 @@
 package com.gmail.necnionch.myplugin.cssyncstock.bukkit;
 
+import com.Acrobot.Breeze.Utils.BlockUtil;
+import com.Acrobot.Breeze.Utils.ImplementationAdapter;
 import com.Acrobot.Breeze.Utils.PriceUtil;
 import com.Acrobot.Breeze.Utils.QuantityUtil;
 import com.Acrobot.ChestShop.Events.PreTransactionEvent;
 import com.Acrobot.ChestShop.Events.TransactionEvent;
 import com.Acrobot.ChestShop.Signs.ChestShopSign;
 import com.Acrobot.ChestShop.Utils.uBlock;
-import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
 import org.bukkit.block.Sign;
@@ -17,6 +18,8 @@ import org.bukkit.persistence.PersistentDataType;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SyncStockSign {
     private Sign sign;
@@ -104,6 +107,7 @@ public class SyncStockSign {
         return Math.max(1, newCost);
     }
 
+
     private static void setPriceLine(Sign sign, Double buy, Double sell) {
         StringBuilder line = new StringBuilder();
 
@@ -137,6 +141,15 @@ public class SyncStockSign {
         return tmp;
     }
 
+    public static Set<Sign> findAnyNearbyShopSign(Block block) {
+        return Arrays.stream(uBlock.SHOP_FACES)
+                .map(block::getRelative)
+                .filter(BlockUtil::isSign)
+                .map(fBlock -> (Sign) ImplementationAdapter.getState(fBlock, false))
+                .filter(ChestShopSign::isValid)
+                .collect(Collectors.toSet());
+    }
+
 
     public static boolean checkValid(Sign sign) {
         return uBlock.findConnectedContainer(sign) != null;
@@ -144,11 +157,17 @@ public class SyncStockSign {
 
     public static boolean has(Sign sign) {
         PersistentDataContainer container = sign.getPersistentDataContainer();
+        return container.has(SyncStockPlugin.getExtraValueKey(), PersistentDataType.FLOAT);
+    }
 
-        NamespacedKey extraKey1 = SyncStockPlugin.getExtraValueKey();
-        NamespacedKey extraKey2 = SyncStockPlugin.getExtraValueKey();
-
-        return container.has(extraKey1, PersistentDataType.FLOAT) || container.has(extraKey2, PersistentDataType.FLOAT);
+    public static boolean clean(Sign sign) {
+        PersistentDataContainer container = sign.getPersistentDataContainer();
+        if (container.has(SyncStockPlugin.getExtraValueKey(), PersistentDataType.FLOAT)) {
+            container.remove(SyncStockPlugin.getExtraValueKey());
+            sign.update();
+            return true;
+        }
+        return false;
     }
 
     public static SyncStockSign from(Sign sign) {

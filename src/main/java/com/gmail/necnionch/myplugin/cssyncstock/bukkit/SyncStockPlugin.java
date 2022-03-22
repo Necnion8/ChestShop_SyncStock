@@ -33,12 +33,7 @@ public final class SyncStockPlugin extends JavaPlugin {
 
     public static NamespacedKey getExtraValueKey() {
         Objects.requireNonNull(instance, "Plugin is not loaded");
-        return new NamespacedKey(instance, "buy_extra");
-    }
-
-    public static NamespacedKey getSellPriceExtraKey() {
-        Objects.requireNonNull(instance, "Plugin is not loaded");
-        return new NamespacedKey(instance, "sell_extra");
+        return new NamespacedKey(instance, "value");
     }
 
 }

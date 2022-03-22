@@ -1,16 +1,16 @@
 package com.gmail.necnionch.myplugin.cssyncstock.bukkit.listeners;
 
-import com.Acrobot.ChestShop.Utils.uBlock;
 import com.gmail.necnionch.myplugin.cssyncstock.bukkit.SyncStockPlugin;
 import com.gmail.necnionch.myplugin.cssyncstock.bukkit.SyncStockSign;
+import com.google.common.collect.Sets;
 import org.bukkit.Location;
-import org.bukkit.block.Block;
-import org.bukkit.block.Container;
-import org.bukkit.block.Sign;
+import org.bukkit.block.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+
+import java.util.Set;
 
 
 public class ContainerListener implements Listener {
@@ -31,17 +31,24 @@ public class ContainerListener implements Listener {
         if (!(invBlock.getState() instanceof Container))
             return;
 
-        Sign sign = uBlock.findAnyNearbyShopSign(invBlock);
-        if (sign == null)
-            return;
+        Container container = (Container) invBlock.getState();
+        Set<Sign> signs = Sets.newHashSet();
 
-        SyncStockSign syncStockSign = SyncStockSign.from(sign);
-        if (syncStockSign != null) {
-            syncStockSign.updatePrice();
+        if (container.getInventory().getHolder() instanceof DoubleChest) {
+            DoubleChest doubleChest = (DoubleChest) container.getInventory().getHolder();
+            signs.addAll(SyncStockSign.findAnyNearbyShopSign(((Chest) doubleChest.getLeftSide()).getBlock()));
+            signs.addAll(SyncStockSign.findAnyNearbyShopSign(((Chest) doubleChest.getRightSide()).getBlock()));
+        } else {
+            signs.addAll(SyncStockSign.findAnyNearbyShopSign(invBlock));
         }
 
+        signs.forEach(sign -> {
+            SyncStockSign syncStockSign = SyncStockSign.from(sign);
+            if (syncStockSign != null) {
+                syncStockSign.updatePrice();
+            }
+        });
+
     }
-
-
 
 }
