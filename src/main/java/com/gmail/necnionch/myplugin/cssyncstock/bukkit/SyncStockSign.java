@@ -5,6 +5,7 @@ import com.Acrobot.ChestShop.Events.PreTransactionEvent;
 import com.Acrobot.ChestShop.Events.TransactionEvent;
 import com.Acrobot.ChestShop.Signs.ChestShopSign;
 import com.Acrobot.ChestShop.Utils.uBlock;
+import com.gmail.necnionch.myplugin.cssyncstock.bukkit.events.CSSyncStockPriceUpdateEvent;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
@@ -82,6 +83,10 @@ public class SyncStockSign {
         double buyPrice = calcCost(extraValue, container, TransactionEvent.TransactionType.BUY, amount);
         double sellPrice = calcCost(extraValue, container, TransactionEvent.TransactionType.SELL, amount);
         setPriceLine(sign, buyPrice, sellPrice);
+
+        SyncStockPlugin.getInstance().getServer().getPluginManager().callEvent(
+                new CSSyncStockPriceUpdateEvent(this, container, container.getLocation(), buyPrice, sellPrice)
+        );
     }
 
 
