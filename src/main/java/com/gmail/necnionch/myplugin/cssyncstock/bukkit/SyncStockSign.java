@@ -1,16 +1,15 @@
 package com.gmail.necnionch.myplugin.cssyncstock.bukkit;
 
-import com.Acrobot.Breeze.Utils.BlockUtil;
-import com.Acrobot.Breeze.Utils.ImplementationAdapter;
-import com.Acrobot.Breeze.Utils.PriceUtil;
-import com.Acrobot.Breeze.Utils.QuantityUtil;
+import com.Acrobot.Breeze.Utils.*;
 import com.Acrobot.ChestShop.Events.PreTransactionEvent;
 import com.Acrobot.ChestShop.Events.TransactionEvent;
 import com.Acrobot.ChestShop.Signs.ChestShopSign;
 import com.Acrobot.ChestShop.Utils.uBlock;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
 import org.bukkit.block.Sign;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -19,7 +18,10 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static com.Acrobot.ChestShop.Utils.uBlock.SHOP_FACES;
 
 public class SyncStockSign {
     private Sign sign;
@@ -82,6 +84,56 @@ public class SyncStockSign {
         setPriceLine(sign, buyPrice, sellPrice);
     }
 
+
+    private void processShop(PreTransactionEvent event, Container container) {
+        Economy economy = SyncStockPlugin.getInstance().getEconomy();
+        double balance = economy.getBalance(event.getClient(), event.getClient().getWorld().getName());
+
+        int max = container.getInventory().getSize() * container.getInventory().getMaxStackSize();
+        int items = Arrays.stream(container.getInventory().getContents())
+                .filter(Objects::nonNull)
+                .mapToInt(ItemStack::getAmount)
+                .sum();
+
+        // （X%←看板設定時に入力）×（チェストの最大容量-入ってるアイテムの個数）
+
+        int amount = Arrays.stream(event.getStock()).mapToInt(ItemStack::getAmount).sum();
+        int amountCount = amount;
+        double newPrice = 0;
+
+        if (TransactionEvent.TransactionType.BUY.equals(event.getTransactionType())) {
+            double tmpValue;
+            while (amountCount-- > 0) {
+                tmpValue = (double) extraValue * Math.max(0, max - items--);
+                if (newPrice + tmpValue > balance)
+                    break;
+                newPrice += tmpValue;
+                if (items <= 0)
+                    break;
+//                System.out.println("price " + (amount - amountCount) + " : " + tmpValue + " : " + newPrice);
+            }
+
+        } else if (TransactionEvent.TransactionType.SELL.equals(event.getTransactionType())) {
+            double tmpValue;
+            while (amountCount-- > 0) {
+                tmpValue = (double) extraValue * Math.max(0, max - ++items);
+                newPrice += tmpValue;
+//                System.out.println("price " + (amount - amountCount) + " : " + tmpValue + " : " + newPrice);
+            }
+        }
+
+        if (amountCount > 0) {
+            // changes item amounts
+            ItemStack itemStack = event.getStock()[0];
+            itemStack.setAmount(amount - amountCount);
+            event.setStock(InventoryUtil.getItemsStacked(itemStack));
+//            System.out.println("Change Amount " + amount + " TO " + (amount - amountCount));
+        }
+//        System.out.println("Amount " + event.getExactPrice().doubleValue() + " TO " + newPrice);
+        event.setExactPrice(BigDecimal.valueOf(newPrice));
+
+    }
+
     private double calcCost(float extra, Container container, TransactionEvent.TransactionType transactionType, int amount) {
         // （X%←看板設定時に入力）×（チェストの最大容量-入ってるアイテムの個数）
 
@@ -91,20 +143,22 @@ public class SyncStockSign {
                 .mapToInt(ItemStack::getAmount)
                 .sum();
         int newCost = 0;
+        double tmpValue;
 
         if (TransactionEvent.TransactionType.BUY.equals(transactionType)) {
-            while (amount >= 0) {
-                newCost += (double) extra * Math.max(0, max - (items - amount--));
+            while (amount-- > 0) {
+                newCost += (double) extra * Math.max(0, max - items--);
             }
         } else if (TransactionEvent.TransactionType.SELL.equals(transactionType)) {
-            while (amount >= 0) {
-                newCost += (double) extra * Math.max(0, max - (items + amount--));
+            while (amount-- > 0) {
+                tmpValue = (double) extra * Math.max(0, max - ++items);
+                newCost += tmpValue;
             }
         } else {
             throw new UnsupportedOperationException("not implemented transaction type: " + transactionType.name());
         }
 
-        return Math.max(1, newCost);
+        return Math.max(0, newCost);
     }
 
 
@@ -142,7 +196,7 @@ public class SyncStockSign {
     }
 
     public static Set<Sign> findAnyNearbyShopSign(Block block) {
-        return Arrays.stream(uBlock.SHOP_FACES)
+        return Arrays.stream(SHOP_FACES)
                 .map(block::getRelative)
                 .filter(BlockUtil::isSign)
                 .map(fBlock -> (Sign) ImplementationAdapter.getState(fBlock, false))
@@ -185,15 +239,37 @@ public class SyncStockSign {
         return syncStockSign;
     }
 
-
     public void onEvent(PreTransactionEvent event) {
         Container container = uBlock.findConnectedContainer(sign);
         if (container == null)
-            return;  // ignored
+            return;
 
-        int amount = Arrays.stream(event.getStock()).mapToInt(ItemStack::getAmount).sum();
-        double newCost = calcCost(extraValue, container, event.getTransactionType(), amount);
-        event.setExactPrice(BigDecimal.valueOf(newCost));
+        processShop(event, container);
+
     }
+
+
+    private void debug(PreTransactionEvent event) {
+        System.out.println("check type : " + event.getTransactionType().name());
+        int amount = 0;
+        for (ItemStack itemStack : event.getStock()) {
+            amount += itemStack.getAmount();
+            System.out.println("type : " + itemStack.getType().name());
+        }
+        System.out.println("amount : " + amount);
+        System.out.println("price : " + event.getExactPrice().doubleValue());
+
+    }
+
+
+    private Predicate<Double> priceChecker(Player player) {
+        return value -> {
+            Economy economy = SyncStockPlugin.getInstance().getEconomy();
+            double balance = economy.getBalance(player);
+            System.out.println("bal : " + balance);
+            return economy.has(player, player.getWorld().getName(), -value);
+        };
+    }
+
 
 }

@@ -36,8 +36,10 @@ public class ContainerListener implements Listener {
 
         if (container.getInventory().getHolder() instanceof DoubleChest) {
             DoubleChest doubleChest = (DoubleChest) container.getInventory().getHolder();
-            signs.addAll(SyncStockSign.findAnyNearbyShopSign(((Chest) doubleChest.getLeftSide()).getBlock()));
-            signs.addAll(SyncStockSign.findAnyNearbyShopSign(((Chest) doubleChest.getRightSide()).getBlock()));
+            if (doubleChest.getLeftSide() != null)
+                signs.addAll(SyncStockSign.findAnyNearbyShopSign(((Chest) doubleChest.getLeftSide()).getBlock()));
+            if (doubleChest.getRightSide() != null)
+                signs.addAll(SyncStockSign.findAnyNearbyShopSign(((Chest) doubleChest.getRightSide()).getBlock()));
         } else {
             signs.addAll(SyncStockSign.findAnyNearbyShopSign(invBlock));
         }

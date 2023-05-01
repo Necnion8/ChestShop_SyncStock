@@ -15,12 +15,14 @@ repositories {
         name = 'sonatype'
         url = 'https://oss.sonatype.org/content/groups/public/'
     }
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
-    implementation 'org.jetbrains:annotations:23.0.0'
+    implementation 'org.jetbrains:annotations:24.0.1'
     compileOnly 'org.spigotmc:spigot-api:1.14.2-R0.1-SNAPSHOT'
     implementation files("libs/ChestShop.jar")
+    implementation "com.github.MilkBowl:VaultAPI:1.7"
 }
 
 def targetJavaVersion = 8

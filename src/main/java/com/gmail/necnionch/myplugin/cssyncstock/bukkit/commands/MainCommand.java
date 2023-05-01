@@ -124,6 +124,10 @@ public class MainCommand extends RootCommand {
             send(player, "&cこのショップ看板は適用できません");
             return;
         }
+        if (!ChestShopSign.isAdminShop(sign)) {
+            send(player, "&cAdminShopのみ適用できます");
+            return;
+        }
         SyncStockSign syncStockSign = SyncStockSign.from(sign, extraValue);
         syncStockSign.updatePrice();
         send(player, "&a価格同期(x" + extraValue + ")を有効にしました");
